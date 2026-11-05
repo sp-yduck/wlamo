@@ -1,0 +1,18 @@
+{
+  "name": "@wllama/wllama",
+  "version": "3.12.0-wlamo.1",
+  "type": "module",
+  "main": "esm/index.js",
+  "module": "esm/index.js",
+  "types": "esm/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./esm/index.d.ts",
+      "import": "./esm/index.js",
+      "require": "./esm/index.cjs"
+    },
+    "./esm/*": "./esm/*",
+    "./compat/*": "./compat/*"
+  },
+  "license": "MIT"
+}

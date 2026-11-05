@@ -1,0 +1,22 @@
+{
+  "name": "wlamo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "PLaMo 3 Translate 0.8B running fully in the browser via wllama, served from Cloudflare Workers",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && tsc --noEmit -p worker && vite build",
+    "preview": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "dependencies": {
+    "@wllama/wllama": "file:vendor/wllama"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261104.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.6",
+    "wrangler": "^4.157.0"
+  }
+}

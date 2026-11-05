@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "wlamo",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // Run the Worker first so every response gets COOP/COEP headers
+    // (required for SharedArrayBuffer => multi-threaded wllama).
+    "run_worker_first": true
+  },
+  "observability": { "enabled": true }
+}

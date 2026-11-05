@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>wlamo — PLaMo 3 Translate in your browser</title>
+  <meta name="description" content="PLaMo 3 Translate 0.8B をブラウザ内だけで動かす翻訳アプリ (wllama + Cloudflare Workers)" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦙</text></svg>" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo">🦙</span><b>wlamo</b><span class="sub">PLaMo 3 Translate × wllama</span></div>
+    <div id="env" class="env"></div>
+  </header>
+
+  <main>
+    <section class="card model">
+      <div class="row">
+        <label>モデル
+          <select id="quant"></select>
+        </label>
+        <label>コンテキスト長
+          <select id="nctx">
+            <option value="2048">2,048</option>
+            <option value="4096" selected>4,096</option>
+            <option value="8192">8,192</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" id="webgpu" /> WebGPU</label>
+        <button id="load" class="primary">モデルを読み込む</button>
+        <button id="unload" class="ghost" hidden>解放</button>
+      </div>
+      <div class="progress" id="progressWrap" hidden><div id="progressBar"></div></div>
+      <div class="status" id="status">モデル未読み込み。初回はダウンロード (約0.4〜0.6GB) が必要です。2回目以降はブラウザのキャッシュから読み込みます。</div>
+    </section>
+
+    <section class="card translate">
+      <div class="langbar">
+        <select id="srcLang"></select>
+        <button id="swap" class="ghost icon" title="言語を入れ替え">⇄</button>
+        <select id="tgtLang"></select>
+        <select id="form" title="日本語の文体">
+          <option value="">文体: 指定なし</option>
+          <option value="polite">です・ます</option>
+          <option value="plain">だ・である</option>
+        </select>
+      </div>
+      <div class="panes">
+        <div class="pane">
+          <textarea id="input" placeholder="翻訳したいテキストを入力 (Ctrl/⌘ + Enter で翻訳)">会議は来週の月曜日に変更されました。資料は前日までに共有してください。</textarea>
+          <div class="pane-foot"><span id="inCount">0 文字</span><button id="clear" class="ghost small">クリア</button></div>
+        </div>
+        <div class="pane">
+          <div id="output" class="output" aria-live="polite"></div>
+          <div class="pane-foot"><span id="stats"></span><button id="copy" class="ghost small">コピー</button></div>
+        </div>
+      </div>
+      <div class="actions">
+        <label class="check"><input type="checkbox" id="useHistory" /> 履歴を文脈として使う</label>
+        <button id="translate" class="primary" disabled>翻訳</button>
+        <button id="stop" class="danger" hidden>停止</button>
+      </div>
+
+      <details class="opts">
+        <summary>詳細オプション (コンテキスト・用語集・生成設定)</summary>
+        <label>コンテキスト <small>原文の背景や周辺の文章など</small>
+          <textarea id="context" rows="2" placeholder="例: 社内向けのお知らせメール"></textarea>
+        </label>
+        <div>
+          <div class="glossary-head">用語集 <button id="addTerm" class="ghost small">＋ 追加</button></div>
+          <div id="glossary"></div>
+        </div>
+        <div class="row">
+          <label>max tokens <input type="number" id="maxTokens" value="1024" min="16" max="8192" /></label>
+          <label>temperature <input type="number" id="temp" value="0" step="0.1" min="0" max="2" /></label>
+        </div>
+      </details>
+    </section>
+
+    <section class="card history">
+      <div class="history-head"><h2>履歴</h2><button id="clearHistory" class="ghost small">履歴を消去</button></div>
+      <ol id="history"></ol>
+    </section>
+  </main>
+
+  <footer>
+    推論はすべてあなたのブラウザ内 (WebAssembly) で実行され、入力テキストはサーバーに送信されません。
+    モデル: <a href="https://huggingface.co/pfnet/plamo-3-translate-0.8b-GGUF" target="_blank" rel="noopener">pfnet/plamo-3-translate-0.8b-GGUF</a>
+    (<a href="https://plamo.preferredai.jp/info/plamo-community-license" target="_blank" rel="noopener">PLaMo Community License</a>) ·
+    Runtime: <a href="https://github.com/ngxson/wllama" target="_blank" rel="noopener">wllama</a> ·
+    Built with PLaMo
+  </footer>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
