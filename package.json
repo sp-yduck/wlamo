@@ -11,6 +11,7 @@
     "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
+    "@fontsource/jetbrains-mono": "^5.3.0",
     "@wllama/wllama": "file:vendor/wllama"
   },
   "devDependencies": {

@@ -5,91 +5,122 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>wlamo — PLaMo 3 Translate in your browser</title>
   <meta name="description" content="PLaMo 3 Translate 0.8B をブラウザ内だけで動かす翻訳アプリ (wllama + Cloudflare Workers)" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦙</text></svg>" />
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%230b3d91' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='M11 3v7M20 3v7M9 10h14v9a7 7 0 0 1-14 0z'/><path d='M13 15h.01M19 15h.01M14 21h4'/></svg>" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand"><span class="logo">🦙</span><b>wlamo</b><span class="sub">PLaMo 3 Translate × wllama</span></div>
-    <div id="env" class="env"></div>
+<div class="wrap">
+
+  <header class="hd">
+    <div class="logo">
+      <div class="mark"><svg width="22" height="22" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 3v7M20 3v7M9 10h14v9a7 7 0 0 1-14 0z"/><path d="M13 15h.01M19 15h.01M14 21h4"/></svg></div>
+      <div><h1>wlamo</h1><p>PLaMo 3 Translate × wllama</p></div>
+    </div>
+    <div id="env" aria-label="実行環境"></div>
   </header>
 
-  <main>
-    <section class="card model">
+  <!-- data-state: idle | loading | ready | error -->
+  <section id="modelPanel" class="card model" data-state="idle" aria-label="モデル">
+    <div class="intro">
+      <h2 id="modelTitle">翻訳モデルをこのブラウザに読み込みます</h2>
+      <p class="lead">PLaMo 3 Translate 0.8B を一度だけダウンロードし、以降はブラウザのキャッシュから数秒で起動します。翻訳はすべてこの端末の中で行われます。</p>
+      <div class="facts">
+        <div class="fact"><b id="factSize">約 0.57 GB</b><span>初回のみ。Wi‑Fi 推奨</span></div>
+        <div class="fact"><b>送信なし</b><span>入力文はサーバーに届きません</span></div>
+        <div class="fact"><b>オフライン可</b><span>読込後は通信不要</span></div>
+      </div>
+    </div>
+    <div class="controls">
+      <label class="lbl" for="quant">量子化</label>
+      <select id="quant"></select>
       <div class="row">
-        <label>モデル
-          <select id="quant"></select>
-        </label>
-        <label>コンテキスト長
-          <select id="nctx">
-            <option value="2048">2,048</option>
-            <option value="4096" selected>4,096</option>
-            <option value="8192">8,192</option>
-          </select>
-        </label>
-        <label class="check"><input type="checkbox" id="webgpu" /> WebGPU</label>
-        <button id="load" class="primary">モデルを読み込む</button>
-        <button id="unload" class="ghost" hidden>解放</button>
-      </div>
-      <div class="progress" id="progressWrap" hidden><div id="progressBar"></div></div>
-      <div class="status" id="status">モデル未読み込み。初回はダウンロード (約0.4〜0.6GB) が必要です。2回目以降はブラウザのキャッシュから読み込みます。</div>
-    </section>
-
-    <section class="card translate">
-      <div class="langbar">
-        <select id="srcLang"></select>
-        <button id="swap" class="ghost icon" title="言語を入れ替え">⇄</button>
-        <select id="tgtLang"></select>
-        <select id="form" title="日本語の文体">
-          <option value="">文体: 指定なし</option>
-          <option value="polite">です・ます</option>
-          <option value="plain">だ・である</option>
+        <select id="nctx" aria-label="コンテキスト長">
+          <option value="2048">コンテキスト 2,048</option>
+          <option value="4096" selected>コンテキスト 4,096</option>
+          <option value="8192">コンテキスト 8,192</option>
         </select>
+        <label class="chk"><input id="webgpu" type="checkbox" /> WebGPU</label>
       </div>
-      <div class="panes">
-        <div class="pane">
-          <textarea id="input" placeholder="翻訳したいテキストを入力 (Ctrl/⌘ + Enter で翻訳)">会議は来週の月曜日に変更されました。資料は前日までに共有してください。</textarea>
-          <div class="pane-foot"><span id="inCount">0 文字</span><button id="clear" class="ghost small">クリア</button></div>
-        </div>
-        <div class="pane">
-          <div id="output" class="output" aria-live="polite"></div>
-          <div class="pane-foot"><span id="stats"></span><button id="copy" class="ghost small">コピー</button></div>
+      <button id="load" class="btn primary lg" type="button">モデルを読み込む</button>
+      <p class="hint">モバイル回線の場合は Q2_K (0.41GB) もおすすめです</p>
+    </div>
+    <div class="statusRow">
+      <span id="status" class="status" role="status"></span>
+      <span class="spacer"></span>
+      <button id="unload" class="btn ghost" type="button" hidden>解放</button>
+    </div>
+    <div id="progressWrap" class="prog" hidden><div id="progressBar"></div></div>
+  </section>
+
+  <form id="translateForm" class="tform" autocomplete="off">
+    <div class="langbar">
+      <div class="side"><select id="srcLang" aria-label="原文の言語"></select></div>
+      <button id="swap" class="btn" type="button" aria-label="言語を入れ替え" title="言語を入れ替え"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h13l-4-4M17 17H4l4 4"/></svg></button>
+      <div class="side">
+        <select id="tgtLang" aria-label="訳文の言語"></select>
+        <div id="form" class="seg" role="radiogroup" aria-label="文体">
+          <label><input type="radio" name="tone" value="" checked />指定なし</label>
+          <label><input type="radio" name="tone" value="polite" />です・ます</label>
+          <label><input type="radio" name="tone" value="plain" />だ・である</label>
         </div>
       </div>
-      <div class="actions">
-        <label class="check"><input type="checkbox" id="useHistory" /> 履歴を文脈として使う</label>
-        <button id="translate" class="primary" disabled>翻訳</button>
-        <button id="stop" class="danger" hidden>停止</button>
+    </div>
+
+    <div class="panes">
+      <div class="pane">
+        <textarea id="input" aria-label="原文" placeholder="翻訳したいテキストを入力">会議は来週の月曜日に変更されました。資料は前日までに共有してください。</textarea>
+        <div class="foot"><span id="inCount">0 文字</span><span class="spacer"></span><span class="kbdhint"><kbd id="modKey">Ctrl</kbd> <kbd>Enter</kbd> で翻訳</span><button id="clear" class="btn ghost" type="button">クリア</button></div>
       </div>
+      <div class="pane out">
+        <div id="output" aria-live="polite" data-placeholder="モデルを読み込むと、ここに訳文が表示されます"></div>
+        <div class="foot"><span id="stats"></span><span class="spacer"></span><button id="copy" class="btn ghost" type="button">コピー</button></div>
+      </div>
+    </div>
 
-      <details class="opts">
-        <summary>詳細オプション (コンテキスト・用語集・生成設定)</summary>
-        <label>コンテキスト <small>原文の背景や周辺の文章など</small>
-          <textarea id="context" rows="2" placeholder="例: 社内向けのお知らせメール"></textarea>
-        </label>
-        <div>
-          <div class="glossary-head">用語集 <button id="addTerm" class="ghost small">＋ 追加</button></div>
-          <div id="glossary"></div>
+    <div class="actions">
+      <label class="chk"><input id="useHistory" type="checkbox" /> 履歴を文脈として使う</label>
+      <button id="translate" class="btn primary lg" type="submit" disabled>翻訳</button>
+      <button id="stop" class="btn lg stopbtn" type="button" hidden>■ 停止</button>
+    </div>
+  </form>
+
+  <details class="card adv">
+    <summary>詳細オプション <span class="sub">文脈・用語集・生成設定</span></summary>
+    <div class="advbody">
+      <div>
+        <h4>コンテキスト（背景情報）</h4>
+        <textarea id="context" placeholder="例: 社内向けセキュリティ資料。読み手はエンジニア。"></textarea>
+        <div class="nums">
+          <label class="field"><span>max tokens</span><input id="maxTokens" type="number" value="1024" min="16" max="8192" /></label>
+          <label class="field"><span>temperature</span><input id="temp" type="number" value="0" step="0.1" min="0" max="2" /></label>
         </div>
-        <div class="row">
-          <label>max tokens <input type="number" id="maxTokens" value="1024" min="16" max="8192" /></label>
-          <label>temperature <input type="number" id="temp" value="0" step="0.1" min="0" max="2" /></label>
-        </div>
-      </details>
-    </section>
+      </div>
+      <div>
+        <h4>用語集</h4>
+        <div id="glossary"></div>
+        <button id="addTerm" class="btn ghost addterm" type="button">＋ 用語を追加</button>
+      </div>
+    </div>
+  </details>
 
-    <section class="card history">
-      <div class="history-head"><h2>履歴</h2><button id="clearHistory" class="ghost small">履歴を消去</button></div>
-      <ol id="history"></ol>
-    </section>
-  </main>
+  <section class="card hist" aria-label="履歴">
+    <div class="histhd"><h3>履歴</h3><button id="clearHistory" class="btn ghost" type="button">履歴を消去</button></div>
+    <ul id="history"></ul>
+  </section>
 
-  <footer>
-    推論はすべてあなたのブラウザ内 (WebAssembly) で実行され、入力テキストはサーバーに送信されません。
-    モデル: <a href="https://huggingface.co/pfnet/plamo-3-translate-0.8b-GGUF" target="_blank" rel="noopener">pfnet/plamo-3-translate-0.8b-GGUF</a>
-    (<a href="https://plamo.preferredai.jp/info/plamo-community-license" target="_blank" rel="noopener">PLaMo Community License</a>) ·
-    Runtime: <a href="https://github.com/ngxson/wllama" target="_blank" rel="noopener">wllama</a> ·
-    Built with PLaMo
+  <footer class="ft">
+    <p class="privacy">🔒 推論はすべてブラウザ内で実行され、入力テキストはサーバーに送信されません</p>
+    <div class="links">
+      <a href="https://huggingface.co/pfnet/plamo-3-translate-0.8b-GGUF" target="_blank" rel="noopener">モデル (PLaMo 3 Translate 0.8B)</a>
+      <a href="https://plamo.preferredai.jp/info/plamo-community-license" target="_blank" rel="noopener">PLaMo Community License</a>
+      <a href="https://github.com/ngxson/wllama" target="_blank" rel="noopener">wllama</a>
+      <a href="https://github.com/sp-yduck/wlamo" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <p class="plamo">Built with PLaMo</p>
   </footer>
-  <script type="module" src="/src/main.ts"></script>
+
+</div>
+<script type="module" src="/src/main.ts"></script>
 </body>
 </html>

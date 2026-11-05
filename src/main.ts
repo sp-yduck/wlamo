@@ -4,14 +4,16 @@ import wasmUrl from '@wllama/wllama/esm/wasm/wllama.wasm?url';
 import compatWasmUrl from '@wllama/wllama/compat/wllama.wasm?url';
 import compatWorkerCode from '@wllama/wllama/compat/wllama.js?raw';
 import { buildPrompt, cleanOutput, LANGUAGES, STOP_SEQUENCES, type GlossaryEntry, type HistoryPair } from './pfml';
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/500.css';
 import './style.css';
 
 const REPO = 'pfnet/plamo-3-translate-0.8b-GGUF';
 const QUANTS = [
-  { file: 'plamo-3-translate-0.8b-Q4_K_M.gguf', label: 'Q4_K_M (0.57GB・推奨)' },
-  { file: 'plamo-3-translate-0.8b-Q4_0.gguf', label: 'Q4_0 (0.55GB)' },
-  { file: 'plamo-3-translate-0.8b-Q3_K_M.gguf', label: 'Q3_K_M (0.49GB)' },
-  { file: 'plamo-3-translate-0.8b-Q2_K.gguf', label: 'Q2_K (0.41GB・最小)' },
+  { file: 'plamo-3-translate-0.8b-Q4_K_M.gguf', name: 'Q4_K_M', size: '0.57GB', label: 'Q4_K_M · 0.57GB · 推奨' },
+  { file: 'plamo-3-translate-0.8b-Q4_0.gguf', name: 'Q4_0', size: '0.55GB', label: 'Q4_0 · 0.55GB' },
+  { file: 'plamo-3-translate-0.8b-Q3_K_M.gguf', name: 'Q3_K_M', size: '0.49GB', label: 'Q3_K_M · 0.49GB' },
+  { file: 'plamo-3-translate-0.8b-Q2_K.gguf', name: 'Q2_K', size: '0.41GB', label: 'Q2_K · 0.41GB · 最小' },
 ];
 const modelUrl = (file: string) => `https://huggingface.co/${REPO}/resolve/main/${file}`;
 
@@ -21,7 +23,7 @@ const el = {
   webgpu: $<HTMLInputElement>('webgpu'), load: $<HTMLButtonElement>('load'), unload: $<HTMLButtonElement>('unload'),
   progressWrap: $('progressWrap'), progressBar: $('progressBar'), status: $('status'),
   srcLang: $<HTMLSelectElement>('srcLang'), tgtLang: $<HTMLSelectElement>('tgtLang'), swap: $<HTMLButtonElement>('swap'),
-  form: $<HTMLSelectElement>('form'), input: $<HTMLTextAreaElement>('input'), output: $('output'),
+  form: $('form'), panel: $('modelPanel'), title: $('modelTitle'), factSize: $('factSize'), tform: $<HTMLFormElement>('translateForm'), input: $<HTMLTextAreaElement>('input'), output: $('output'),
   inCount: $('inCount'), stats: $('stats'), clear: $<HTMLButtonElement>('clear'), copy: $<HTMLButtonElement>('copy'),
   translate: $<HTMLButtonElement>('translate'), stop: $<HTMLButtonElement>('stop'), useHistory: $<HTMLInputElement>('useHistory'),
   context: $<HTMLTextAreaElement>('context'), glossary: $('glossary'), addTerm: $<HTMLButtonElement>('addTerm'),
@@ -36,13 +38,15 @@ const saved: Partial<Settings> = JSON.parse(localStorage.getItem(LS) ?? '{}');
 function saveSettings() {
   const s: Settings = {
     quant: el.quant.value, nctx: el.nctx.value, webgpu: el.webgpu.checked,
-    src: el.srcLang.value, tgt: el.tgtLang.value, form: el.form.value,
+    src: el.srcLang.value, tgt: el.tgtLang.value, form: toneValue(),
   };
   localStorage.setItem(LS, JSON.stringify(s));
 }
 
 type HistoryItem = HistoryPair & { src: string; tgt: string; at: number };
 let history: HistoryItem[] = JSON.parse(localStorage.getItem(`${LS}:history`) ?? '[]');
+const toneValue = () => (el.form.querySelector<HTMLInputElement>('input:checked')?.value ?? '');
+const setTone = (v: string) => el.form.querySelectorAll<HTMLInputElement>('input').forEach((i) => (i.checked = i.value === v));
 const saveHistory = () => localStorage.setItem(`${LS}:history`, JSON.stringify(history.slice(0, 50)));
 
 // ---------- init UI ----------
@@ -64,19 +68,43 @@ const hasWebGPU = await (async () => {
 const isolated = self.crossOriginIsolated;
 el.webgpu.checked = saved.webgpu ?? hasWebGPU;
 el.webgpu.disabled = !hasWebGPU;
-el.form.value = saved.form ?? '';
+setTone(saved.form ?? '');
+if (/Mac|iPhone|iPad/.test(navigator.platform)) $('modKey').textContent = '⌘';
 const badge = (text: string, on: boolean) => `<span class="badge ${on ? '' : 'off'}">${text}</span>`;
 el.env.innerHTML =
-  badge(isolated ? `マルチスレッド (${navigator.hardwareConcurrency} cores)` : 'シングルスレッド', isolated) +
+  badge(isolated ? `マルチスレッド · ${navigator.hardwareConcurrency} cores` : 'シングルスレッド', isolated) +
   badge(hasWebGPU ? 'WebGPU 対応' : 'WebGPU 非対応', hasWebGPU) +
   badge(`llama.cpp ${Wllama.getLibllamaVersion()}`, true);
 
+const quantInfo = () => QUANTS.find((q) => q.file === el.quant.value) ?? QUANTS[0];
+type PanelState = 'idle' | 'loading' | 'ready' | 'error';
+function setPanel(state: PanelState) {
+  el.panel.dataset.state = state;
+  const q = quantInfo();
+  el.title.textContent = {
+    idle: '翻訳モデルをこのブラウザに読み込みます',
+    loading: 'モデルを取得しています',
+    ready: '',
+    error: '読み込みに失敗しました',
+  }[state];
+  el.load.textContent = {
+    idle: `モデルを読み込む（${q.size}）`,
+    loading: '読み込み中…',
+    ready: '再読み込み',
+    error: '再試行',
+  }[state];
+  el.factSize.textContent = `約 ${q.size.replace('GB', ' GB')}`;
+  el.output.dataset.placeholder = state === 'ready' ? '訳文がここに表示されます' : 'モデルを読み込むと、ここに訳文が表示されます';
+}
+el.quant.addEventListener('change', () => { if (el.panel.dataset.state !== 'ready') setPanel(el.panel.dataset.state as PanelState); });
+setPanel('idle');
+
 function updateFormVisibility() {
-  el.form.hidden = el.tgtLang.value !== 'ja';
+  el.form.hidden = el.tgtLang.value !== 'ja';  // 'ja(easy)' has no form control
 }
 updateFormVisibility();
 
-for (const s of [el.quant, el.nctx, el.webgpu, el.srcLang, el.form]) s.addEventListener('change', saveSettings);
+for (const s of [el.quant, el.nctx, el.webgpu, el.srcLang]) s.addEventListener('change', saveSettings);
 el.tgtLang.addEventListener('change', () => { updateFormVisibility(); saveSettings(); });
 el.swap.addEventListener('click', () => {
   const src = el.srcLang.value;
@@ -103,7 +131,7 @@ el.copy.addEventListener('click', async () => {
 function addTerm(source = '', target = '') {
   const row = document.createElement('div');
   row.className = 'term';
-  row.innerHTML = `<input type="text" placeholder="原語 (例: 管理画面)" class="g-src"><input type="text" placeholder="訳語 (例: dashboard)" class="g-tgt"><button class="ghost small" title="削除">✕</button>`;
+  row.innerHTML = `<input type="text" placeholder="原語 (例: 管理画面)" class="g-src" aria-label="原語"><input type="text" placeholder="訳語 (例: dashboard)" class="g-tgt" aria-label="訳語"><button type="button" title="削除" aria-label="削除">✕</button>`;
   (row.querySelector('.g-src') as HTMLInputElement).value = source;
   (row.querySelector('.g-tgt') as HTMLInputElement).value = target;
   row.querySelector('button')!.addEventListener('click', () => row.remove());
@@ -117,11 +145,15 @@ const readGlossary = (): GlossaryEntry[] =>
   }));
 
 // history
+const fmtDate = (t: number) => {
+  const d = new Date(t); const z = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`;
+};
 const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 function renderHistory() {
   el.history.innerHTML = history
-    .map((h) => `<li><div class="src">${escapeHtml(h.input)}</div><div>${escapeHtml(h.output)}</div><div class="meta">${h.src || 'auto'} → ${h.tgt} · ${new Date(h.at).toLocaleString()}</div></li>`)
-    .join('') || '<li class="meta" style="list-style:none">まだ履歴はありません</li>';
+    .map((h) => `<li><span class="src">${escapeHtml(h.input)}</span><span>${escapeHtml(h.output)}</span><span class="meta">${h.src || 'auto'} → ${h.tgt} · ${fmtDate(h.at)}</span></li>`)
+    .join('') || '<li class="empty">履歴はまだありません</li>';
 }
 renderHistory();
 el.clearHistory.addEventListener('click', () => { history = []; saveHistory(); renderHistory(); });
@@ -141,6 +173,7 @@ async function loadModel() {
   el.quant.disabled = el.nctx.disabled = el.webgpu.disabled = true;
   el.progressWrap.hidden = false;
   el.progressBar.style.width = '0%';
+  setPanel('loading');
   const t0 = performance.now();
   try {
     await wllama?.exit();
@@ -162,24 +195,25 @@ async function loadModel() {
     }
     el.progressBar.style.width = '100%';
     const secs = ((performance.now() - t0) / 1000).toFixed(1);
+    setPanel('ready');
     setStatus(
-      `✅ 読み込み完了 (${secs}秒) — ${el.quant.selectedOptions[0].text} / ` +
+      `✅ 読み込み完了 (${secs}秒) — ${quantInfo().name} / ` +
         `${wllama.isMultithread() ? `${wllama.getNumThreads()} threads` : 'single thread'}` +
         `${el.webgpu.checked ? ' / WebGPU' : ' / CPU'}`,
     );
     el.translate.disabled = false;
     el.unload.hidden = false;
-    el.load.textContent = '再読み込み';
   } catch (e) {
     console.error(e);
-    setStatus(`読み込みに失敗しました: ${(e as Error).message}\nWebGPU をオフにする・より小さい量子化を選ぶと改善する場合があります。`, true);
+    setPanel('error');
+    setStatus(`❌ ${(e as Error).message}\nWebGPU をオフにする・Q3_K_M / Q2_K やコンテキスト 2,048 を選ぶと改善する場合があります。`, true);
     wllama = null;
     el.translate.disabled = true;
   } finally {
     el.load.disabled = false;
     el.quant.disabled = el.nctx.disabled = false;
     el.webgpu.disabled = !hasWebGPU;
-    setTimeout(() => (el.progressWrap.hidden = true), 800);
+    setTimeout(() => (el.progressWrap.hidden = true), 400);
   }
 }
 el.load.addEventListener('click', loadModel);
@@ -188,7 +222,7 @@ el.unload.addEventListener('click', async () => {
   wllama = null;
   el.translate.disabled = true;
   el.unload.hidden = true;
-  el.load.textContent = 'モデルを読み込む';
+  setPanel('idle');
   setStatus('モデルを解放しました (ダウンロード済みファイルはキャッシュに残っています)。');
 });
 
@@ -207,7 +241,7 @@ async function translate() {
       sourceLang,
       context: el.context.value,
       glossary: readGlossary(),
-      form: (el.form.value || undefined) as 'plain' | 'polite' | undefined,
+      form: (toneValue() || undefined) as 'plain' | 'polite' | undefined,
       history: el.useHistory.checked
         ? history.filter((h) => h.tgt === targetLang && h.src === (sourceLang ?? '')).slice(0, 4).reverse()
         : [],
@@ -270,7 +304,8 @@ async function translate() {
     el.stop.hidden = true;
   }
 }
-el.translate.addEventListener('click', translate);
+el.tform.addEventListener('submit', (e) => { e.preventDefault(); translate(); });
+el.form.addEventListener('change', saveSettings);
 el.stop.addEventListener('click', () => abort?.abort());
 el.input.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); translate(); }

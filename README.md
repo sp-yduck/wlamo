@@ -4,6 +4,10 @@ Preferred Networks の **PLaMo 3 Translate 0.8B** を [wllama](https://github.co
 
 ![screenshot](docs/screenshot.png)
 
+<p><img src="docs/screenshot-dark.png" width="62%" alt="dark"> <img src="docs/screenshot-mobile.png" width="20%" alt="mobile"></p>
+
+UI デザインは Claude Design で作成したモックを元に実装しています。
+
 - 推論はすべてクライアント側 (WASM / マルチスレッド / 対応環境では WebGPU)。入力テキストはサーバーに送られません
 - モデル: [`pfnet/plamo-3-translate-0.8b-GGUF`](https://huggingface.co/pfnet/plamo-3-translate-0.8b-GGUF) を Hugging Face から直接取得し、ブラウザのキャッシュ (OPFS) に保存。2回目以降はオフラインでも読み込み可
 - 量子化 Q4_K_M / Q4_0 / Q3_K_M / Q2_K を選択可能
