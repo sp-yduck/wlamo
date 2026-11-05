@@ -16,7 +16,9 @@ const ISOLATION_HEADERS: Record<string, string> = {
   'Cross-Origin-Embedder-Policy': 'require-corp',
   'Cross-Origin-Resource-Policy': 'same-origin',
   'X-Content-Type-Options': 'nosniff',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  // Hugging Face rejects model downloads whose Referer is *.workers.dev (404),
+  // so never send a Referer.
+  'Referrer-Policy': 'no-referrer',
 };
 
 export default {
