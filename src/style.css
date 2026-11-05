@@ -51,7 +51,7 @@ select:focus-visible, input:focus-visible, textarea:focus-visible, .btn:focus-vi
 .field { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--sub); }
 .chk { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--sub); cursor: pointer; }
 .chk input { accent-color: var(--acc); width: 16px; height: 16px; margin: 0; }
-.btn { font: inherit; font-size: 13px; font-weight: 600; border-radius: 999px; padding: 8px 16px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; min-height: 36px; transition: background .15s, opacity .15s; }
+.btn { white-space: nowrap; font: inherit; font-size: 13px; font-weight: 600; border-radius: 999px; padding: 8px 16px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; min-height: 36px; transition: background .15s, opacity .15s; }
 .btn:hover:not(:disabled) { background: var(--soft); }
 .btn.primary { background: var(--acc); border-color: var(--acc); color: var(--acc-ink); }
 .btn.primary:hover:not(:disabled) { background: var(--acc); filter: brightness(1.1); }
@@ -111,7 +111,7 @@ select:focus-visible, input:focus-visible, textarea:focus-visible, .btn:focus-vi
 .langbar select { min-width: 200px; font-weight: 600; }
 #swap { width: 40px; height: 40px; border-radius: 50%; padding: 0; display: grid; place-items: center; }
 .seg { display: inline-flex; background: var(--soft); border-radius: 8px; padding: 3px; gap: 2px; }
-.seg label { font-size: 12px; padding: 4px 10px; border-radius: 6px; color: var(--sub); cursor: pointer; user-select: none; }
+.seg label { white-space: nowrap; font-size: 12px; padding: 4px 10px; border-radius: 6px; color: var(--sub); cursor: pointer; user-select: none; }
 .seg input { position: absolute; opacity: 0; pointer-events: none; }
 .seg label:has(input:checked) { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
 .seg label:has(input:focus-visible) { outline: 2px solid var(--acc); }
@@ -185,7 +185,10 @@ details.adv summary .sub { color: var(--sub); font-weight: 400; margin-left: aut
   .pane.out { border-left: 1px solid var(--line); background: var(--panel-2); }
   .langbar { grid-template-columns: 1fr 40px 1fr; gap: 8px; }
   .langbar select { min-width: 0; width: 100%; }
-  .langbar .seg { grid-column: 1 / -1; }
+  /* let the target select and tone switch join the grid so the switch can take a full row */
+  .langbar .side { display: contents; }
+  .langbar .seg { grid-column: 1 / -1; display: flex; }
+  .seg label { flex: 1; text-align: center; }
   .kbdhint { display: none; }
   .actions { flex-direction: column-reverse; align-items: stretch; }
   #translate, #stop { width: 100%; }
