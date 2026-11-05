@@ -9,6 +9,7 @@
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦙</text></svg>" />
+  <script>try { const t = localStorage.getItem('wlamo:theme'); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
 </head>
 <body>
 <div class="wrap">
@@ -18,7 +19,10 @@
       <div class="mark" aria-hidden="true">🦙</div>
       <div><h1>wlamo</h1><p>PLaMo 3 Translate × wllama</p></div>
     </div>
-    <div id="env" aria-label="実行環境"></div>
+    <div class="hdr">
+      <div id="env" aria-label="実行環境"></div>
+      <button id="theme" class="btn" type="button" aria-label="テーマを切り替え" title="テーマを切り替え"></button>
+    </div>
   </header>
 
   <!-- data-state: idle | loading | ready | error -->
@@ -70,7 +74,7 @@
 
     <div class="panes">
       <div class="pane">
-        <textarea id="input" aria-label="原文" placeholder="翻訳したいテキストを入力">会議は来週の月曜日に変更されました。資料は前日までに共有してください。</textarea>
+        <textarea id="input" aria-label="原文" placeholder="翻訳したいテキストを入力"></textarea>
         <div class="foot"><span id="inCount">0 文字</span><span class="spacer"></span><span class="kbdhint"><kbd id="modKey">Ctrl</kbd> <kbd>Enter</kbd> で翻訳</span><button id="clear" class="btn ghost" type="button">クリア</button></div>
       </div>
       <div class="pane out">

@@ -70,6 +70,19 @@ el.webgpu.checked = saved.webgpu ?? hasWebGPU;
 el.webgpu.disabled = !hasWebGPU;
 setTone(saved.form ?? '');
 if (/Mac|iPhone|iPad/.test(navigator.platform)) $('modKey').textContent = '⌘';
+
+// ---------- theme toggle (follows OS until the user picks one) ----------
+const themeBtn = $<HTMLButtonElement>('theme');
+const isDark = () => (document.documentElement.dataset.theme ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')) === 'dark';
+const paintThemeBtn = () => (themeBtn.textContent = isDark() ? '☀️' : '🌙');
+themeBtn.addEventListener('click', () => {
+  const t = isDark() ? 'light' : 'dark';
+  document.documentElement.dataset.theme = t;
+  localStorage.setItem('wlamo:theme', t);
+  paintThemeBtn();
+});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', paintThemeBtn);
+paintThemeBtn();
 const badge = (text: string, on: boolean) => `<span class="badge ${on ? '' : 'off'}">${text}</span>`;
 el.env.innerHTML =
   badge(isolated ? `マルチスレッド · ${navigator.hardwareConcurrency} cores` : 'シングルスレッド', isolated) +
